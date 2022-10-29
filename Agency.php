@@ -1,7 +1,8 @@
 <?php
-///
+
 namespace app\models;
 
+use app\models\base\AgencyCities;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\caching\TagDependency;
@@ -1016,6 +1017,24 @@ class Agency extends base\Agency implements PropertyInterface
     public function getText(): ActiveQuery
     {
         return $this->hasOne(Text::class, ['agency_id' => 'id']);
+    }
+
+    public function setCitiesList(): void
+    {
+        $agencyCities = Profile::find()
+            ->select('city_id, agency_id')->where(['is_broken' => 0,  'is_archived' => 0] )
+            ->andWhere('agency_id is not null and city_id is not null')
+            ->andWhere(['agency_id' => $this->id])
+            ->groupBy('city_id, agency_id')
+            ->all();
+        (new AgencyCity())->deleteAll(['agency_id' => $this->id]);
+
+        foreach ($agencyCities as $ac) {
+            if ($ac->agency->visible && $ac->city->published && $ac->city->country->published) {
+                (new AgencyCities(['city_id' => $ac->city_id,  'agency_id' => $ac->agency_id]))->save();
+            }
+        }
+
     }
 
 }
